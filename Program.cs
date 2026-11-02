@@ -10,10 +10,11 @@ public struct Bullet
 }
 public struct Enemy
 {
-    public int enemyLvl;
-    public int enemyHp;
-    public int enemyDmg;
-    public int enemySpd;
+    public Rectangle Rect;
+    public float enemyLvl;
+    public float enemyHp;
+    public float enemyDmg;
+    public float enemySpd;
 }
 class Program
 {
@@ -29,12 +30,12 @@ class Program
         //variables
         
         //player
-        float playerDmg = 15.0f, playerHp = 150.0f, weaponDmg = 0, armor = 0, playerSpeed = 200.0f, bulletSpeed = 600.0f;
+        float playerDmg = 10.0f, playerHp = 150.0f, weaponDmg = 0, armor = 0, playerSpeed = 200.0f, bulletSpeed = 600.0f;
         Vector2 playerPos = new Vector2((screenWidth-70)/2, (screenHeight-70)/2);
         Vector2 playerCenter = new Vector2(playerPos.X + (70 / 2), playerPos.Y + (70 / 2));
 
         //game
-        int lvl, towerHp;
+        float lvl = 1f, towerHp = 100f;
         int HowToPlayLvl = 1;
         Vector2 cursorPos = Raylib.GetMousePosition();
         List<Bullet> bullets = new List<Bullet>();
@@ -201,10 +202,10 @@ class Program
 
         void movement()
         {
-            if(Raylib.IsKeyDown(KeyboardKey.W)) {playerPos.Y -= playerSpeed * FrameTime;}
-            if(Raylib.IsKeyDown(KeyboardKey.S)) {playerPos.Y += playerSpeed * FrameTime;}
-            if(Raylib.IsKeyDown(KeyboardKey.A)) {playerPos.X -= playerSpeed * FrameTime;}
-            if(Raylib.IsKeyDown(KeyboardKey.D)) {playerPos.X += playerSpeed * FrameTime;}
+            if(Raylib.IsKeyDown(KeyboardKey.W)) {if(playerPos.Y > 0) {playerPos.Y -= playerSpeed * FrameTime;}}
+            if(Raylib.IsKeyDown(KeyboardKey.S)) {if(playerPos.Y < screenHeight - 70) {playerPos.Y += playerSpeed * FrameTime;}}
+            if(Raylib.IsKeyDown(KeyboardKey.A)) {if(playerPos.X > 0) {playerPos.X -= playerSpeed * FrameTime;}}
+            if(Raylib.IsKeyDown(KeyboardKey.D)) {if(playerPos.X < screenWidth - 70) {playerPos.X += playerSpeed * FrameTime;}}
         }
         void shooting()
         {
@@ -221,7 +222,25 @@ class Program
                 bullets[i] = bullet;
             }  
         }
+        void enemySpawn()
+        {
+            Random rand = new Random();
+            int spawnChance = rand.Next(0, 100);
+            if (spawnChance < 10)
+            {
+                Enemy newEnemy = new Enemy {Rect = new Rectangle(0, 0, 50, 50), enemyLvl = lvl, enemyHp = 100f * (float)Math.Sqrt(lvl), enemyDmg = 10f * (float)Math.Sqrt(lvl), enemySpd = 200f};
+                enemies.Add(newEnemy);
+            }
+        }
+        void pathGeneration()
+        {
+            Random rand1 = new Random();
+            Random rand2 = new Random();
+            List<Vector2> path = new List<Vector2>();
+            for (int i = 1; i < path.Count - 1; i++)
+            {
+                Raylib.DrawRectangleV(new Vector2(path[i].X - 50.0f / 2, path[i].Y - 50.0f / 2), new Vector2(50.0f, 50.0f), Color.DarkGray);
+            }
+        }
     }
 }
-
-
