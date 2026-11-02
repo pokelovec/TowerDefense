@@ -165,11 +165,6 @@ class Program
                 //How to play
                 case Gamestate.HowToPlay:
                     Raylib.ClearBackground(Color.Black);
-                    Raylib.DrawRectangle((int)playerPos.X, (int)playerPos.Y, 70, 70, Color.Green);
-                    foreach (var bullet in bullets)
-                    {
-                        Raylib.DrawRectangleRec(bullet.Rect, Color.DarkGreen);
-                    }
                     switch(HowToPlayLvl)
                     {
                         case 1:
@@ -212,6 +207,11 @@ class Program
                             }
                             break;
                     }
+                    foreach (var bullet in bullets)
+                    {
+                        Raylib.DrawRectangleRec(bullet.Rect, Color.DarkGreen);
+                    }
+                    Raylib.DrawRectangle((int)playerPos.X, (int)playerPos.Y, 70, 70, Color.Green);
                     break;
 
 
