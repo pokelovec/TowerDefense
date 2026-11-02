@@ -37,11 +37,14 @@ class Program
         //game
         float lvl = 1f, towerHp = 100f;
         int HowToPlayLvl = 1;
+        float pathGenX = screenWidth / 3, pathGenY = 0;
         Vector2 cursorPos = Raylib.GetMousePosition();
         List<Bullet> bullets = new List<Bullet>();
         List<Enemy> enemies = new List<Enemy>();
+        List<Vector2> path = new List<Vector2>();
         float textTimer = 0.1f;
         float FrameTime = Raylib.GetFrameTime();
+        bool isPathGenerated = false, isNextLevel = true, Xturn = false;
 
         //code
         while (!Raylib.WindowShouldClose())
@@ -61,11 +64,19 @@ class Program
                     {
                         HowToPlayLvl++;
                         textTimer = 1.0f;
+                        isNextLevel = true;
                     }
                     if (HowToPlayLvl > 1)
                     {
                         shooting();
+                        if (HowToPlayLvl == 2 && Raylib.IsMouseButtonPressed(MouseButton.Left))
+                        {
+                            HowToPlayLvl++;
+                            textTimer = 1.0f;
+                            isNextLevel = true;
+                        }
                     }
+                    
                     break;
             }
 
@@ -175,6 +186,31 @@ class Program
                                 Raylib.DrawText("Shooting: LMB", (screenWidth - Raylib.MeasureText("Shooting: LMB", 50))/2, (screenHeight-50)/2 - 420, 50, Color.DarkGray);
                             }
                             break;
+                        case 3:
+                            if (textTimer > 0)
+                            {
+                               Raylib.DrawText("Shooting: LMB", (screenWidth - Raylib.MeasureText("Shooting: LMB", 50))/2, (screenHeight-50)/2 - 420, 50, Color.DarkGray);
+                               textTimer -= FrameTime;
+                            }
+                            else if (textTimer <= 0)
+                            {
+                                Raylib.DrawText("Enemies: Red squares", (screenWidth - Raylib.MeasureText("Enemies: Red squares", 50))/2, (screenHeight-50)/2 - 420, 50, Color.DarkGray);
+                            }
+                            if (isNextLevel)
+                            {
+                                isPathGenerated = false;
+                                isNextLevel = false;
+                            }
+                            if (!isPathGenerated)
+                            {
+                                pathGeneration1();
+                            }
+                            Raylib.DrawSplineLinear(path.ToArray(), path.Count, 50.0f, Color.DarkGray);
+                            for (int i = 1; i < path.Count - 1; i++)
+                            {
+                                Raylib.DrawRectangleV(new Vector2(path[i].X - 50.0f / 2, path[i].Y - 50.0f / 2), new Vector2(50.0f, 50.0f), Color.DarkGray);
+                            }
+                            break;
                     }
                     break;
 
@@ -232,15 +268,36 @@ class Program
                 enemies.Add(newEnemy);
             }
         }
-        void pathGeneration()
+        void pathGeneration1()
         {
             Random rand1 = new Random();
             Random rand2 = new Random();
-            List<Vector2> path = new List<Vector2>();
-            for (int i = 1; i < path.Count - 1; i++)
+            path.Add(new Vector2(pathGenX, pathGenY));
+            while (pathGenY < screenHeight)
             {
-                Raylib.DrawRectangleV(new Vector2(path[i].X - 50.0f / 2, path[i].Y - 50.0f / 2), new Vector2(50.0f, 50.0f), Color.DarkGray);
+                if (Xturn)
+                {
+                    pathGenX = rand1.Next(1, screenWidth / 200) * 100;
+                    Xturn = false;
+                }
+                else
+                {
+                    pathGenY += rand2.Next(1, 3) * 100;
+                    if (pathGenY < 0)
+                    {
+                        pathGenY = 0;
+                    }
+                    if (pathGenY > screenHeight)
+                    {
+                        pathGenY = screenHeight;
+                    }
+                    Xturn = true;
+                }
+                path.Add(new Vector2(pathGenX, pathGenY));
             }
+            pathGenX = screenWidth / 3;
+            pathGenY = 0;
+            isPathGenerated = true;
         }
     }
 }
