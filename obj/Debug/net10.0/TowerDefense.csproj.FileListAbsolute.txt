@@ -21,3 +21,4 @@ C:\Users\lukas\OneDrive\Plocha\codes\TowerDefense\obj\Debug\net10.0\refint\Tower
 C:\Users\lukas\OneDrive\Plocha\codes\TowerDefense\obj\Debug\net10.0\TowerDefense.pdb
 C:\Users\lukas\OneDrive\Plocha\codes\TowerDefense\obj\Debug\net10.0\TowerDefense.genruntimeconfig.cache
 C:\Users\lukas\OneDrive\Plocha\codes\TowerDefense\obj\Debug\net10.0\ref\TowerDefense.dll
+C:\Users\lukas\OneDrive\Plocha\codes\TowerDefense\obj\Debug\net10.0\TowerDefense.sourcelink.json
