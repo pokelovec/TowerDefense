@@ -15,6 +15,8 @@ public struct Enemy
     public float enemyHp;
     public float enemyDmg;
     public float enemySpd;
+    public List<Vector2> path;
+    public int NextPointIndex;
 }
 class Program
 {
@@ -36,21 +38,23 @@ class Program
 
         //game
         float lvl = 1f, towerHp = 100f;
-        int HowToPlayLvl = 1;
-        float pathGenX = screenWidth / 3, pathGenY = 0;
+        int HowToPlayLvl = 1, enemiesInLevel = 0, whichPath = 1;
+        float path1GenX = screenWidth / 3, path2GenX = screenWidth / 3 * 2, path1GenY = 0, path2GenY = 0;
         Vector2 cursorPos = Raylib.GetMousePosition();
         List<Bullet> bullets = new List<Bullet>();
         List<Enemy> enemies = new List<Enemy>();
-        List<Vector2> path = new List<Vector2>();
+        List<Vector2> path1 = new List<Vector2>();
+        List<Vector2> path2 = new List<Vector2>();
         float textTimer = 0.1f;
+        float enemyWaitTime = 1f, LevelWaitTime = 1f;
         float FrameTime = Raylib.GetFrameTime();
-        bool isPathGenerated = false, isNextLevel = true, Xturn = false;
+        bool isPath1Generated = false, isPath2Generated = false, isNextLevel = true, Xturn = false;
 
         //code
         while (!Raylib.WindowShouldClose())
         {
             cursorPos = Raylib.GetMousePosition();
-            FrameTime = Raylib.GetFrameTime();
+            FrameTime = Raylib.GetFrameTime(); 
             playerCenter = new Vector2(playerPos.X + (70 / 2), playerPos.Y + (70 / 2));
 
             //Code part
@@ -75,6 +79,16 @@ class Program
                             textTimer = 1.0f;
                             isNextLevel = true;
                         }
+                    }
+                    if (HowToPlayLvl == 3 && isPath1Generated && isPath2Generated)
+                    {
+                        if (enemiesInLevel < 10)
+                        {
+                            Random rand = new Random();
+                            whichPath = rand.Next(1, 3);
+                            enemySpawn();
+                        }
+                        enemyMovement();
                     }
                     
                     break;
@@ -190,20 +204,31 @@ class Program
                             else if (textTimer <= 0)
                             {
                                 Raylib.DrawText("Enemies: Red squares", (screenWidth - Raylib.MeasureText("Enemies: Red squares", 50))/2, (screenHeight-50)/2 - 420, 50, Color.DarkGray);
-                            }
-                            if (isNextLevel)
-                            {
-                                isPathGenerated = false;
-                                isNextLevel = false;
-                            }
-                            if (!isPathGenerated)
-                            {
-                                pathGeneration1();
-                            }
-                            Raylib.DrawSplineLinear(path.ToArray(), path.Count, 50.0f, Color.DarkGray);
-                            for (int i = 1; i < path.Count - 1; i++)
-                            {
-                                Raylib.DrawRectangleV(new Vector2(path[i].X - 50.0f / 2, path[i].Y - 50.0f / 2), new Vector2(50.0f, 50.0f), Color.DarkGray);
+                                if (isNextLevel)
+                                {
+                                    isPath1Generated = false;
+                                    isPath2Generated = false;
+                                    isNextLevel = false;
+                                    LevelWaitTime = 3f;
+                                }
+                                if (!isPath1Generated)
+                                {
+                                    pathGeneration1();
+                                }
+                                if (!isPath2Generated)
+                                {
+                                    pathGeneration2();
+                                }
+                                Raylib.DrawSplineLinear(path1.ToArray(), path1.Count, 70.0f, Color.DarkGray);
+                                for (int i = 1; i < path1.Count - 1; i++)
+                                {
+                                    Raylib.DrawRectangleV(new Vector2(path1[i].X - 70.0f / 2, path1[i].Y - 70.0f / 2), new Vector2(70.0f, 70.0f), Color.DarkGray);
+                                }
+                                Raylib.DrawSplineLinear(path2.ToArray(), path2.Count, 70.0f, Color.DarkGray);
+                                for (int i = 1; i < path2.Count - 1; i++)
+                                {
+                                    Raylib.DrawRectangleV(new Vector2(path2[i].X - 70.0f / 2, path2[i].Y - 70.0f / 2), new Vector2(70.0f, 70.0f), Color.DarkGray);
+                                }
                             }
                             break;
                     }
@@ -212,6 +237,10 @@ class Program
                         Raylib.DrawRectangleRec(bullet.Rect, Color.DarkGreen);
                     }
                     Raylib.DrawRectangle((int)playerPos.X, (int)playerPos.Y, 70, 70, Color.Green);
+                    foreach (var enemy in enemies)
+                    {
+                        Raylib.DrawRectangleRec(enemy.Rect, Color.Red);
+                    }
                     break;
 
 
@@ -260,44 +289,106 @@ class Program
         }
         void enemySpawn()
         {
-            Random rand = new Random();
-            int spawnChance = rand.Next(0, 100);
-            if (spawnChance < 10)
+            if (enemyWaitTime <= 0)
             {
-                Enemy newEnemy = new Enemy {Rect = new Rectangle(0, 0, 50, 50), enemyLvl = lvl, enemyHp = 100f * (float)Math.Sqrt(lvl), enemyDmg = 10f * (float)Math.Sqrt(lvl), enemySpd = 200f};
-                enemies.Add(newEnemy);
+                List<Vector2> selectedPath = whichPath == 1 ? path1 : path2;
+                enemies.Add(new Enemy { Rect = new Rectangle(selectedPath[0].X - 25, selectedPath[0].Y, 50, 50), enemyLvl = lvl, enemyHp = 50 * (float)Math.Sqrt(lvl), enemyDmg = 5 * (float)Math.Sqrt(lvl), enemySpd = 100, path = selectedPath, NextPointIndex = 1 });   
+                enemyWaitTime = LevelWaitTime;
+                enemiesInLevel++;
+            }
+            else enemyWaitTime -= FrameTime;
+        }
+        void enemyMovement()
+        {
+            for (int i = enemies.Count - 1; i >= 0; i--)
+            {
+                Enemy enemy = enemies[i];
+                Vector2 enemyPos = new Vector2(enemy.Rect.X + 25, enemy.Rect.Y + 25);
+                Vector2 targetPos = enemy.path[enemy.NextPointIndex];
+                Vector2 toTarget = targetPos - enemyPos;
+                float step = enemy.enemySpd * FrameTime;
+                if (toTarget.Length() <= step)
+                {
+                    enemyPos = targetPos;
+                    enemy.NextPointIndex++;
+                    if (enemy.NextPointIndex >= enemy.path.Count)
+                    {
+                        enemies.RemoveAt(i);
+                        continue;
+                    }
+                }
+                else
+                {
+                    enemyPos += Vector2.Normalize(toTarget) * step;
+                }
+                enemy.Rect.X = enemyPos.X - 25;
+                enemy.Rect.Y = enemyPos.Y - 25;
+                enemies[i] = enemy;
             }
         }
         void pathGeneration1()
         {
             Random rand1 = new Random();
             Random rand2 = new Random();
-            path.Add(new Vector2(pathGenX, pathGenY));
-            while (pathGenY < screenHeight)
+            path1.Add(new Vector2(path1GenX, path1GenY));
+            Xturn = false;
+            while (path1GenY < screenHeight)
             {
                 if (Xturn)
                 {
-                    pathGenX = rand1.Next(1, screenWidth / 200) * 100;
+                    path1GenX = rand1.Next(1, screenWidth / 300) * 100;
                     Xturn = false;
                 }
                 else
                 {
-                    pathGenY += rand2.Next(1, 3) * 100;
-                    if (pathGenY < 0)
+                    path1GenY += rand2.Next(3, 8) * 50;
+                    if (path1GenY < 0)
                     {
-                        pathGenY = 0;
+                        path1GenY = 0;
                     }
-                    if (pathGenY > screenHeight)
+                    if (path1GenY > screenHeight)
                     {
-                        pathGenY = screenHeight;
+                        path1GenY = screenHeight;
                     }
                     Xturn = true;
                 }
-                path.Add(new Vector2(pathGenX, pathGenY));
+                path1.Add(new Vector2(path1GenX, path1GenY));
             }
-            pathGenX = screenWidth / 3;
-            pathGenY = 0;
-            isPathGenerated = true;
+            path1GenX = screenWidth / 3;
+            path1GenY = 0;
+            isPath1Generated = true;
+        }
+        void pathGeneration2()
+        {
+            Random rand1 = new Random();
+            Random rand2 = new Random();
+            path2.Add(new Vector2(path2GenX, path2GenY));
+            Xturn = false;
+            while (path2GenY < screenHeight)
+            {
+                if (Xturn)
+                {
+                    path2GenX = rand1.Next(screenWidth / 150, screenWidth / 100 - 1) * 100;
+                    Xturn = false;
+                }
+                else
+                {
+                    path2GenY += rand2.Next(3, 8) * 50;
+                    if (path2GenY < 0)
+                    {
+                        path2GenY = 0;
+                    }
+                    if (path2GenY > screenHeight)
+                    {
+                        path2GenY = screenHeight;
+                    }
+                    Xturn = true;
+                }
+                path2.Add(new Vector2(path2GenX, path2GenY));
+            }
+            path2GenX = screenWidth / 3 * 2;
+            path2GenY = 0;
+            isPath2Generated = true;
         }
     }
 }
