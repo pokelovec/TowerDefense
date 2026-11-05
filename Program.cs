@@ -8,6 +8,12 @@ public struct Bullet
     public Rectangle Rect;
     public Vector2 Velocity;
 }
+public struct EnemyBullet
+{
+    public Rectangle Rect;
+    public Vector2 Velocity;
+    public float damage;
+}
 public struct Enemy
 {
     public Rectangle Rect;
@@ -19,6 +25,7 @@ public struct Enemy
     public int NextPointIndex;
     public bool isHit;
     public float hitTimer;
+    public float shootTimer;
 }
 class Program
 {
@@ -26,6 +33,7 @@ class Program
     {
         Raylib.InitWindow(1, 1, "emental");
         Raylib.ToggleFullscreen();
+        Raylib.SetTargetFPS(60);
         int screenHeight = Raylib.GetScreenHeight();
         int screenWidth = Raylib.GetScreenWidth();
         Color DarkRed = new Color(139, 0, 0, 255);
@@ -45,11 +53,12 @@ class Program
         Vector2 cursorPos = Raylib.GetMousePosition();
         List<Bullet> bullets = new List<Bullet>();
         List<Enemy> enemies = new List<Enemy>();
+        List<EnemyBullet> enemyBullets = new List<EnemyBullet>();
         List<Vector2> path1 = new List<Vector2>();
         List<Vector2> path2 = new List<Vector2>();
         float textTimer = 0.1f;
         float enemyWaitTime = 1f, LevelWaitTime = 1f;
-        float FrameTime = Raylib.GetFrameTime();
+        float FrameTime = Math.Min(Raylib.GetFrameTime(), 0.05f);
         bool isPath1Generated = false, isPath2Generated = false, isNextLevel = true, Xturn = false;
 
         //code
@@ -92,6 +101,7 @@ class Program
                         }
                         enemyMovement();
                     }
+                    enemyShooting();
                     
                     break;
             }
@@ -250,6 +260,10 @@ class Program
                             Raylib.DrawRectangleRec(enemy.Rect, Color.Red);
                         }
                     }
+                    foreach (var bullet in enemyBullets)
+                    {
+                        Raylib.DrawRectangleRec(bullet.Rect, Color.Maroon);
+                    }
                     break;
 
 
@@ -358,6 +372,37 @@ class Program
                 enemy.Rect.X = enemyPos.X - 25;
                 enemy.Rect.Y = enemyPos.Y - 25;
                 enemies[i] = enemy;
+            }
+        }
+        void enemyShooting()
+        {
+            for (int i = enemies.Count - 1; i >= 0; i--)
+            {
+                Enemy enemy = enemies[i];
+                if (enemy.shootTimer <= 0)
+                {
+                    Vector2 BulletDirection = Vector2.Normalize(playerCenter - new Vector2(enemy.Rect.X + 25, enemy.Rect.Y + 25));
+                    enemyBullets.Add(new EnemyBullet {Rect = new Rectangle(enemy.Rect.X + 20, enemy.Rect.Y + 20, 10, 10), Velocity = BulletDirection * enemy.enemySpd * 2, damage = enemy.enemyDmg});
+                    enemy.shootTimer = 2f;
+                }
+                else
+                {
+                    enemy.shootTimer -= FrameTime;
+                }
+                enemies[i] = enemy;
+            }
+            for (int j = enemyBullets.Count - 1; j >= 0; j--)
+            {
+                EnemyBullet bullet = enemyBullets[j];
+                bullet.Rect.X += bullet.Velocity.X * FrameTime; 
+                bullet.Rect.Y += bullet.Velocity.Y * FrameTime;
+                enemyBullets[j] = bullet;
+                if (Raylib.CheckCollisionRecs(bullet.Rect, new Rectangle(playerPos.X, playerPos.Y, 70, 70)))
+                {
+                    playerHp -= bullet.damage - armor;
+                    enemyBullets.RemoveAt(j);
+                    break;
+                }
             }
         }
         void pathGeneration1()
