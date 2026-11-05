@@ -17,6 +17,8 @@ public struct Enemy
     public float enemySpd;
     public List<Vector2> path;
     public int NextPointIndex;
+    public bool isHit;
+    public float hitTimer;
 }
 class Program
 {
@@ -239,7 +241,14 @@ class Program
                     Raylib.DrawRectangle((int)playerPos.X, (int)playerPos.Y, 70, 70, Color.Green);
                     foreach (var enemy in enemies)
                     {
-                        Raylib.DrawRectangleRec(enemy.Rect, Color.Red);
+                        if (enemy.isHit)
+                        {
+                            Raylib.DrawRectangleRec(enemy.Rect, DarkRed);
+                        }
+                        else
+                        {
+                            Raylib.DrawRectangleRec(enemy.Rect, Color.Red);
+                        }
                     }
                     break;
 
@@ -285,6 +294,23 @@ class Program
                 bullet.Rect.X += bullet.Velocity.X * FrameTime; 
                 bullet.Rect.Y += bullet.Velocity.Y * FrameTime;
                 bullets[i] = bullet;
+                for (int j = enemies.Count - 1; j >= 0; j--)
+                {
+                    Enemy enemy = enemies[j];
+                    if (Raylib.CheckCollisionRecs(bullet.Rect, enemy.Rect))
+                    {
+                        enemy.isHit = true;
+                        enemy.hitTimer = 0.1f;
+                        enemy.enemyHp -= playerDmg + weaponDmg;
+                        enemies[j] = enemy;
+                        if (enemy.enemyHp <= 0)
+                        {
+                            enemies.RemoveAt(j);
+                        }
+                        bullets.RemoveAt(i);
+                        break;
+                    }
+                }
             }  
         }
         void enemySpawn()
@@ -292,7 +318,7 @@ class Program
             if (enemyWaitTime <= 0)
             {
                 List<Vector2> selectedPath = whichPath == 1 ? path1 : path2;
-                enemies.Add(new Enemy { Rect = new Rectangle(selectedPath[0].X - 25, selectedPath[0].Y, 50, 50), enemyLvl = lvl, enemyHp = 50 * (float)Math.Sqrt(lvl), enemyDmg = 5 * (float)Math.Sqrt(lvl), enemySpd = 100, path = selectedPath, NextPointIndex = 1 });   
+                enemies.Add(new Enemy { Rect = new Rectangle(selectedPath[0].X - 25, selectedPath[0].Y, 50, 50), enemyLvl = lvl, enemyHp = 50 * (float)Math.Sqrt(lvl), enemyDmg = 5 * (float)Math.Sqrt(lvl), enemySpd = 100, path = selectedPath, NextPointIndex = 1, isHit = false, hitTimer = 0 });   
                 enemyWaitTime = LevelWaitTime;
                 enemiesInLevel++;
             }
@@ -303,6 +329,14 @@ class Program
             for (int i = enemies.Count - 1; i >= 0; i--)
             {
                 Enemy enemy = enemies[i];
+                if (enemy.isHit)
+                {
+                    enemy.hitTimer -= FrameTime;
+                    if (enemy.hitTimer <= 0)
+                    {
+                        enemy.isHit = false;
+                    }
+                }
                 Vector2 enemyPos = new Vector2(enemy.Rect.X + 25, enemy.Rect.Y + 25);
                 Vector2 targetPos = enemy.path[enemy.NextPointIndex];
                 Vector2 toTarget = targetPos - enemyPos;
