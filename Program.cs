@@ -2,7 +2,7 @@
 using System.Numerics;
 using System.Security.Cryptography.X509Certificates;
 using Raylib_cs;
-enum Gamestate {Welcome, Battle, Pause, Upgrade, Death, Exit, HowToPlay}
+enum Gamestate {Welcome, Battle, Pause, Upgrade, Lost, Exit, HowToPlay}
 public struct Bullet 
 {
     public Rectangle Rect;
@@ -42,9 +42,13 @@ class Program
         //variables
         
         //player
-        float playerDmg = 10.0f, playerHp = 150.0f, weaponDmg = 0, armor = 0, playerSpeed = 200.0f, bulletSpeed = 600.0f;
+        float playerDmg = 10.0f, fullPlayerHp = 100f, playerHp = 100.0f, weaponDmg = 0, armor = 0, playerSpeed = 200.0f, bulletSpeed = 600.0f, deathTimer = 0f, hitTimer = 0f;
         Vector2 playerPos = new Vector2((screenWidth-70)/2, (screenHeight-70)/2);
         Vector2 playerCenter = new Vector2(playerPos.X + (70 / 2), playerPos.Y + (70 / 2));
+        bool isPlayerDead = false, isPlayerHit = false;
+        Rectangle healthBar = new Rectangle(playerPos.X, playerPos.Y + 80, 70 * (playerHp / fullPlayerHp), 10);
+        Rectangle fullHealthBar = new Rectangle(playerPos.X, playerPos.Y + 80, 70, 10);
+        Rectangle DeathBar = new Rectangle(playerPos.X, playerPos.Y + 80, 70 * (deathTimer / 3f), 10);
 
         //game
         float lvl = 1f, towerHp = 100f;
@@ -248,7 +252,8 @@ class Program
                     {
                         Raylib.DrawRectangleRec(bullet.Rect, Color.DarkGreen);
                     }
-                    Raylib.DrawRectangle((int)playerPos.X, (int)playerPos.Y, 70, 70, Color.Green);
+                    if (!isPlayerHit) Raylib.DrawRectangle((int)playerPos.X, (int)playerPos.Y, 70, 70, Color.Green);
+                    else {Raylib.DrawRectangle((int)playerPos.X, (int)playerPos.Y, 70, 70, Color.DarkGreen); hitTimer -= FrameTime; if(hitTimer <= 0) isPlayerHit = false;}
                     foreach (var enemy in enemies)
                     {
                         if (enemy.isHit)
@@ -260,6 +265,13 @@ class Program
                             Raylib.DrawRectangleRec(enemy.Rect, Color.Red);
                         }
                     }
+                    DeathBar = new Rectangle(playerPos.X + 70 - 70 * (deathTimer / 3f), playerPos.Y + 80, 70 * (deathTimer / 3f), 10);
+                    healthBar = new Rectangle(playerPos.X, playerPos.Y + 80, 70 * (playerHp / fullPlayerHp), 10);
+                    fullHealthBar = new Rectangle(playerPos.X, playerPos.Y + 80, 70, 10);
+                    Raylib.DrawRectangleRec(fullHealthBar, Color.DarkGray);
+                    Raylib.DrawRectangleRec(healthBar, Color.Red);
+                    if (isPlayerDead) Raylib.DrawRectangleRec(DeathBar, Color.DarkGray);
+                
                     foreach (var bullet in enemyBullets)
                     {
                         Raylib.DrawRectangleRec(bullet.Rect, Color.Maroon);
@@ -290,42 +302,50 @@ class Program
 
         void movement()
         {
-            if(Raylib.IsKeyDown(KeyboardKey.W)) {if(playerPos.Y > 0) {playerPos.Y -= playerSpeed * FrameTime;}}
-            if(Raylib.IsKeyDown(KeyboardKey.S)) {if(playerPos.Y < screenHeight - 70) {playerPos.Y += playerSpeed * FrameTime;}}
-            if(Raylib.IsKeyDown(KeyboardKey.A)) {if(playerPos.X > 0) {playerPos.X -= playerSpeed * FrameTime;}}
-            if(Raylib.IsKeyDown(KeyboardKey.D)) {if(playerPos.X < screenWidth - 70) {playerPos.X += playerSpeed * FrameTime;}}
+            if (!isPlayerDead)
+            {
+                if(Raylib.IsKeyDown(KeyboardKey.W)) {if(playerPos.Y > 0) {playerPos.Y -= playerSpeed * FrameTime;}}
+                if(Raylib.IsKeyDown(KeyboardKey.S)) {if(playerPos.Y < screenHeight - 70) {playerPos.Y += playerSpeed * FrameTime;}}
+                if(Raylib.IsKeyDown(KeyboardKey.A)) {if(playerPos.X > 0) {playerPos.X -= playerSpeed * FrameTime;}}
+                if(Raylib.IsKeyDown(KeyboardKey.D)) {if(playerPos.X < screenWidth - 70) {playerPos.X += playerSpeed * FrameTime;}}
+            }
+            else if (deathTimer <= 0) isPlayerDead = false;
+            else {deathTimer -= FrameTime; playerHp = fullPlayerHp;}
         }
         void shooting()
         {
-            if(Raylib.IsMouseButtonPressed(MouseButton.Left))
+            if (!isPlayerDead)
             {
-            Vector2 BulletDirection = Vector2.Normalize(cursorPos - playerCenter);
-            bullets.Add(new Bullet {Rect = new Rectangle(playerCenter.X - 5, playerCenter.Y - 5, 10, 10), Velocity = BulletDirection * bulletSpeed});
-            }
-            for (int i = bullets.Count - 1; i >= 0; i--)
-            {
-                Bullet bullet = bullets[i];
-                bullet.Rect.X += bullet.Velocity.X * FrameTime; 
-                bullet.Rect.Y += bullet.Velocity.Y * FrameTime;
-                bullets[i] = bullet;
-                for (int j = enemies.Count - 1; j >= 0; j--)
+                if(Raylib.IsMouseButtonPressed(MouseButton.Left))
                 {
-                    Enemy enemy = enemies[j];
-                    if (Raylib.CheckCollisionRecs(bullet.Rect, enemy.Rect))
-                    {
-                        enemy.isHit = true;
-                        enemy.hitTimer = 0.1f;
-                        enemy.enemyHp -= playerDmg + weaponDmg;
-                        enemies[j] = enemy;
-                        if (enemy.enemyHp <= 0)
-                        {
-                            enemies.RemoveAt(j);
-                        }
-                        bullets.RemoveAt(i);
-                        break;
-                    }
+                Vector2 BulletDirection = Vector2.Normalize(cursorPos - playerCenter);
+                bullets.Add(new Bullet {Rect = new Rectangle(playerCenter.X - 5, playerCenter.Y - 5, 10, 10), Velocity = BulletDirection * bulletSpeed});
                 }
-            }  
+                for (int i = bullets.Count - 1; i >= 0; i--)
+                {
+                    Bullet bullet = bullets[i];
+                    bullet.Rect.X += bullet.Velocity.X * FrameTime; 
+                    bullet.Rect.Y += bullet.Velocity.Y * FrameTime;
+                    bullets[i] = bullet;
+                    for (int j = enemies.Count - 1; j >= 0; j--)
+                    {
+                        Enemy enemy = enemies[j];
+                        if (Raylib.CheckCollisionRecs(bullet.Rect, enemy.Rect))
+                        {
+                            enemy.isHit = true;
+                            enemy.hitTimer = 0.1f;
+                            enemy.enemyHp -= playerDmg + weaponDmg;
+                            enemies[j] = enemy;
+                            if (enemy.enemyHp <= 0)
+                            {
+                                enemies.RemoveAt(j);
+                            }
+                            bullets.RemoveAt(i);
+                            break;
+                        }
+                    }
+                } 
+            }
         }
         void enemySpawn()
         {
@@ -400,6 +420,8 @@ class Program
                 if (Raylib.CheckCollisionRecs(bullet.Rect, new Rectangle(playerPos.X, playerPos.Y, 70, 70)))
                 {
                     playerHp -= bullet.damage - armor;
+                    isPlayerHit = true; hitTimer = 0.1f;
+                    if (playerHp <= 0) {isPlayerDead = true; deathTimer = 3f;}
                     enemyBullets.RemoveAt(j);
                     break;
                 }
